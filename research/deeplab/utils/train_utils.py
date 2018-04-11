@@ -15,10 +15,64 @@
 """Utility functions for training."""
 
 import six
+import os
 
 import tensorflow as tf
 
 slim = tf.contrib.slim
+
+
+def download_xception_cityscapes_trainfine_checkpoint(model_dir = os.getcwd()):
+  """Downloads xception_cityscapes_trainfine checkpoint
+  Args:
+    model_dir: local path to download checkpoint to
+  """
+
+def download_checkpoint(model_name = 'mobilenetv2_coco_voctrainaug', model_dir = os.getcwd()):
+  """Downloads the model checkpoint following deeplab_demo.ipynb
+  
+  Args:
+    model_dir: local path to download checkpoint to
+
+  Function added by Sean Hendryx
+  """
+  #@title Select and download models {display-mode: "form"}
+
+  #MODEL_NAME = 'mobilenetv2_coco_voctrainaug'  # @param ['mobilenetv2_coco_voctrainaug', 'mobilenetv2_coco_voctrainval', 'xception_coco_voctrainaug', 'xception_coco_voctrainval']
+
+  MODEL_NAME = model_name
+
+  _DOWNLOAD_URL_PREFIX = 'http://download.tensorflow.org/models/'
+  _MODEL_URLS = {
+      'xception_cityscapes_trainfine':
+          'deeplabv3_cityscapes_train_2018_02_06.tar.gz'
+      'mobilenetv2_coco_voctrainaug':
+          'deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz',
+      'mobilenetv2_coco_voctrainval':
+          'deeplabv3_mnv2_pascal_trainval_2018_01_29.tar.gz',
+      'xception_coco_voctrainaug':
+          'deeplabv3_pascal_train_aug_2018_01_04.tar.gz',
+      'xception_coco_voctrainval':
+          'deeplabv3_pascal_trainval_2018_01_04.tar.gz',
+  }
+  _TARBALL_NAME = 'deeplab_model.tar.gz'
+
+  #model_dir = tempfile.mkdtemp()
+  # If ouput directoy does not exist, try to create it:
+  if not os.path.exists(model_dir):
+    print('Specified output directoy ' + model_dir + ' does not exist. Creating it.')
+    os.makedirs(model_dir)
+
+  tf.gfile.MakeDirs(model_dir)
+
+  download_path = os.path.join(model_dir, _TARBALL_NAME)
+  print('downloading model, this might take a while...')
+  urllib.request.urlretrieve(_DOWNLOAD_URL_PREFIX + _MODEL_URLS[MODEL_NAME],
+                     download_path)
+  print('download completed! loading DeepLab model...')
+
+  #MODEL = DeepLabModel(download_path)
+  #print('model loaded successfully!')
 
 
 def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
