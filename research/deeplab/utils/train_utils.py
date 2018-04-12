@@ -15,6 +15,7 @@
 """Utility functions for training."""
 
 import six
+from six.moves import urllib
 import os
 
 import tensorflow as tf
@@ -27,6 +28,8 @@ def download_xception_cityscapes_trainfine_checkpoint(model_dir = os.getcwd()):
   Args:
     model_dir: local path to download checkpoint to
   """
+  download_checkpoint(model_name = 'xception_cityscapes_trainfine', model_dir = model_dir)
+
 
 def download_checkpoint(model_name = 'mobilenetv2_coco_voctrainaug', model_dir = os.getcwd()):
   """Downloads the model checkpoint following deeplab_demo.ipynb
@@ -45,7 +48,7 @@ def download_checkpoint(model_name = 'mobilenetv2_coco_voctrainaug', model_dir =
   _DOWNLOAD_URL_PREFIX = 'http://download.tensorflow.org/models/'
   _MODEL_URLS = {
       'xception_cityscapes_trainfine':
-          'deeplabv3_cityscapes_train_2018_02_06.tar.gz'
+          'deeplabv3_cityscapes_train_2018_02_06.tar.gz',
       'mobilenetv2_coco_voctrainaug':
           'deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz',
       'mobilenetv2_coco_voctrainval':
@@ -66,10 +69,10 @@ def download_checkpoint(model_name = 'mobilenetv2_coco_voctrainaug', model_dir =
   tf.gfile.MakeDirs(model_dir)
 
   download_path = os.path.join(model_dir, _TARBALL_NAME)
-  print('downloading model, this might take a while...')
+  print('Downloading model, this might take a while...')
   urllib.request.urlretrieve(_DOWNLOAD_URL_PREFIX + _MODEL_URLS[MODEL_NAME],
                      download_path)
-  print('download completed! loading DeepLab model...')
+  print('Download completed!')
 
   #MODEL = DeepLabModel(download_path)
   #print('model loaded successfully!')
