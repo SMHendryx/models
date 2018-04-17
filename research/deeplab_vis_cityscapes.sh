@@ -11,11 +11,27 @@ export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/slim
 
 # vars:
 #PATH_TO_CHECKPOINT=/home/sean/repositories/tensorflow_models/models/research/deeplab/checkpoints/deeplabv3_cityscapes_train/
-PATH_TO_CHECKPOINT=/home/sean/repositories/tensorflow_models/models/research/deeplab/checkpoints/deeplabv3_mnv2_cityscapes_train
+PATH_TO_CHECKPOINT=/home/sean/repositories/tensorflow_models/models/research/deeplab/checkpoints/deeplabv3_mnv2_cityscapes_train_2018_02_05.tar.gz
 PATH_TO_VIS_DIR=/home/sean/data/experiments/deeplab/xception_cityscapes_trainfine/apolloscape/road02_ins
 PATH_TO_DATASET=/home/sean/repositories/tensorflow_models/models/research/deeplab/datasets/apolloscape/one_image
 
+# Check if direc exists
+if [[ ! -f $PATH_TO_CHECKPOINT ]]; then
+    echo "ERROR: $PATH_TO_CHECKPOINT is not a directory" 1>&2
+    exit 1
+fi
 
+# Check if direc exists
+if [[ ! -d $PATH_TO_VIS_DIR ]]; then
+    echo "ERROR: $PATH_TO_VIS_DIR is not a directory" 1>&2
+    exit 1
+fi
+
+# Check if direc exists
+if [[ ! -d $PATH_TO_DATASET ]]; then
+    echo "ERROR: $PATH_TO_DATASET is not a directory" 1>&2
+    exit 1
+fi
 
 # From tensorflow/models/research/
 python deeplab/vis.py \
