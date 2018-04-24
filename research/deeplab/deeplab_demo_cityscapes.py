@@ -24,7 +24,7 @@ from PIL import Image
 import tensorflow as tf
 
 from utils import get_dataset_colormap
-
+from typing import Tuple, List, Dict
 
 # In[5]:
 
@@ -63,7 +63,7 @@ class DeepLabModel(object):
 
     self.sess = tf.Session(graph=self.graph)
 
-  def run(self, image):
+  def run(self, image: PIL.Image) -> Tuple[PIL.Image.Image, numpy.ndarray]:
     """Runs inference on a single image.
 
     Args:
@@ -365,3 +365,39 @@ def savePredictions(model: DeepLabModel, input_path: str) -> None:
   save_annotation(seg_map, par_dir, output_name)
 
 savePredictions(MODEL, image_path)
+
+def saveOverlay(model: DeepLabModel, input_path: str, save_dir: str = None) -> None:
+  """
+  Inferences DeepLab model on local image and visualizes result
+  Sean Hendryx
+  :param model: DeepLab model
+  :param input_path: path to input image
+  :return: None
+  """
+  try:
+    # load image
+    orignal_im = Image.open(input_path)
+  except IOError:
+    print('Cannot retrieve image. Please check path: ' + input_path)
+    return None
+
+  print('running deeplab on image %s...' % input_path)
+  resized_im, seg_map = model.run(orignal_im)
+
+  # make save dir if not set:
+  if save_dir == None:
+    save_dir = getParentDir(input_path)
+
+  output_name = os.path.join(save_dir, getBasenameNoExtension(input_path) + '_DeepLab_predictions_overlay.png')
+
+  plt.ioff()
+  plt.figure()
+  plt.imshow(resized_im)
+  seg_im = get_dataset_colormap.label_to_color_image(seg_map, dataset = 'cityscapes').astype(np.uint8)
+  plt.imshow(seg_im, alpha=0.7)
+  plt.axis('off')
+  plt.savefig(output_name, bbox = 'tight')
+
+
+saveOverlay(MODEL, image_path) #, save_dir = '/Users/seanmhendryx/Explorer.ai/data/semantic_segmentation/images/two')
+
