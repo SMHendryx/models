@@ -23,6 +23,8 @@ from PIL import Image
 
 import tensorflow as tf
 
+from utils import get_dataset_colormap
+
 
 # In[5]:
 
@@ -82,47 +84,35 @@ class DeepLabModel(object):
     return resized_image, seg_map
 
 
-def create_pascal_label_colormap():
-  """Creates a label colormap used in PASCAL VOC segmentation benchmark.
+def create_cityscapes_label_colormap():
+  """Creates a label colormap used in CITYSCAPES segmentation benchmark.
 
   Returns:
     A Colormap for visualizing segmentation results.
   """
-  colormap = np.zeros((256, 3), dtype=int)
-  ind = np.arange(256, dtype=int)
-
-  for shift in reversed(range(8)):
-    for channel in range(3):
-      colormap[:, channel] |= ((ind >> channel) & 1) << shift
-    ind >>= 3
-
+  colormap = np.asarray([
+      [128, 64, 128],
+      [244, 35, 232],
+      [70, 70, 70],
+      [102, 102, 156],
+      [190, 153, 153],
+      [153, 153, 153],
+      [250, 170, 30],
+      [220, 220, 0],
+      [107, 142, 35],
+      [152, 251, 152],
+      [70, 130, 180],
+      [220, 20, 60],
+      [255, 0, 0],
+      [0, 0, 142],
+      [0, 0, 70],
+      [0, 60, 100],
+      [0, 80, 100],
+      [0, 0, 230],
+      [119, 11, 32],
+  ])
   return colormap
 
-
-def label_to_color_image(label):
-  """Adds color defined by the dataset colormap to the label.
-
-  Args:
-    label: A 2D array with integer type, storing the segmentation label.
-
-  Returns:
-    result: A 2D array with floating type. The element of the array
-      is the color indexed by the corresponding element in the input label
-      to the PASCAL color map.
-
-  Raises:
-    ValueError: If label is not of rank 2 or its value is larger than color
-      map maximum entry.
-  """
-  if label.ndim != 2:
-    raise ValueError('Expect 2-D input label')
-
-  colormap = create_pascal_label_colormap()
-
-  if np.max(label) >= len(colormap):
-    raise ValueError('label value too large.')
-
-  return colormap[label]
 
 
 def vis_segmentation(image, seg_map):
@@ -136,11 +126,12 @@ def vis_segmentation(image, seg_map):
   plt.title('input image')
 
   plt.subplot(grid_spec[1])
-  seg_image = label_to_color_image(seg_map).astype(np.uint8)
+  seg_image = get_dataset_colormap.label_to_color_image(seg_map, dataset = 'cityscapes').astype(np.uint8)
   plt.imshow(seg_image)
   plt.axis('off')
   plt.title('segmentation map')
 
+  # abstract this into function:
   plt.subplot(grid_spec[2])
   plt.imshow(image)
   plt.imshow(seg_image, alpha=0.7)
@@ -159,7 +150,7 @@ def vis_segmentation(image, seg_map):
   plt.show()
 
 
-LABEL_NAMES = np.asarray([
+PASCAL_LABEL_NAMES = np.asarray([
     'background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
     'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike',
     'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tv'
@@ -198,8 +189,8 @@ LABEL_NAMES = np.asarray([      'unlabeled'            ,
       'train'                , 
       'motorcycle'           ,   'bicycle'              ,  'license plate' ])
 
-FULL_LABEL_MAP = np.arange(len(LABEL_NAMES)).reshape(len(LABEL_NAMES), 1)
-FULL_COLOR_MAP = label_to_color_image(FULL_LABEL_MAP)
+FULL_LABEL_MAP = np.arange(len(CITYSCAPES_LABEL_NAMES)).reshape(len(CITYSCAPES_LABEL_NAMES), 1)
+FULL_COLOR_MAP = get_dataset_colormap.label_to_color_image(FULL_LABEL_MAP)
 
 
 # In[6]:
@@ -227,15 +218,15 @@ _TARBALL_NAME = 'deeplab_model.tar.gz'
 model_dir = tempfile.mkdtemp()
 tf.gfile.MakeDirs(model_dir)
 
-download = False
+download = True
 if download:
   download_path = os.path.join(model_dir, _TARBALL_NAME)
   print('downloading model, this might take a while...')
   urllib.request.urlretrieve(_DOWNLOAD_URL_PREFIX + _MODEL_URLS[MODEL_NAME], download_path)
   print('download completed! loading DeepLab model...')
 
-already_downloaded = '/home/sean/repositories/tensorflow_models/models/research/deeplab/checkpoints/deeplabv3_mnv2_cityscapes_train_2018_02_05.tar.gz'
-MODEL = DeepLabModel(already_downloaded)#or: download_path
+#already_downloaded = '/home/sean/repositories/tensorflow_models/models/research/deeplab/checkpoints/deeplabv3_mnv2_cityscapes_train_2018_02_05.tar.gz'
+MODEL = DeepLabModel(download_path)#or: already_downloaded
 print('model loaded successfully!')
 
 
@@ -297,6 +288,80 @@ def runVisualization(path):
 image_url = IMAGE_URL or _SAMPLE_URL % SAMPLE_IMAGE
 
 
-image_path = '/home/sean/repositories/tensorflow_models/models/research/deeplab/datasets/apolloscape/one_image/val-170927_063811892_Camera_5.jpg'
+image_path = '/Users/seanmhendryx/Explorer.ai/data/semantic_segmentation/images/two/frame0113.jpg'
 runVisualization(image_path)
 
+
+
+import numpy as np
+import PIL.Image as img
+import tensorflow as tf
+
+from utils import get_dataset_colormap
+
+
+def save_annotation(label,
+                    save_dir,
+                    filename,
+                    add_colormap=True,
+                    colormap_type=get_dataset_colormap.get_cityscapes_name()):
+  """Saves the given label to image on disk.
+
+  Args:
+    label: The numpy array to be saved. The data will be converted
+      to uint8 and saved as png image.
+    save_dir: The directory to which the results will be saved.
+    filename: The image filename.
+    add_colormap: Add color map to the label or not.
+    colormap_type: Colormap type for visualization.
+  """
+  # Add colormap for visualizing the prediction.
+  if add_colormap:
+    colored_label = get_dataset_colormap.label_to_color_image(
+        label, colormap_type)
+  else:
+    colored_label = label
+
+  pil_image = img.fromarray(colored_label.astype(dtype=np.uint8))
+  with tf.gfile.Open('%s/%s.png' % (save_dir, filename), mode='w') as f:
+    pil_image.save(f, 'PNG')
+
+
+def getParentDir(filepath: str) -> str:
+  """
+  """
+  # Get parent dir:
+  import os.path
+  return os.path.abspath(os.path.join(filepath, os.pardir))
+
+def getBasenameNoExtension(filepath: str) -> str:
+  """
+  """
+  from os.path import basename, splitext
+  return splitext(basename(filepath))[0]
+
+def savePredictions(model: DeepLabModel, input_path: str) -> None:
+  """
+  Inferences DeepLab model on local image and visualizes result
+  Sean Hendryx
+  :param model: DeepLab model
+  :param input_path: path to input image
+  :return: None
+  """
+  try:
+    # load image
+    orignal_im = Image.open(input_path)
+  except IOError:
+    print('Cannot retrieve image. Please check path: ' + input_path)
+    return None
+
+  print('running deeplab on image %s...' % input_path)
+  resized_im, seg_map = model.run(orignal_im)
+
+  # Get parent dir:
+  par_dir = getParentDir(input_path)
+  output_name = getBasenameNoExtension(input_path) + '_DeepLab_predictions'
+
+  save_annotation(seg_map, par_dir, output_name)
+
+savePredictions(MODEL, image_path)
