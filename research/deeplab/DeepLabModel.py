@@ -15,6 +15,18 @@ from typing import Tuple, List, Dict
 import logging
 import sys
 
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+#Set up file handler:
+#fh = logging.FileHandler(os.path.basename(__file__) + str(datetime.now()).replace(" ", "_") + '.log')
+# Pipe output to stdout
+sh = logging.StreamHandler(sys.stdout)
+sh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+sh.setFormatter(formatter)
+logger.addHandler(sh)
+
 
 class DeepLabModel(object):
   """Class to load deeplab model and run inference."""

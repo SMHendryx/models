@@ -21,7 +21,7 @@ from typing import Tuple, List, Dict
 
 import logging
 import sys
-import DeepLabModel
+from DeepLabModel import DeepLabModel
 
 import argparse
 
@@ -43,7 +43,8 @@ def parseArgs():
 
   parser = argparse.ArgumentParser(description='Runs DeepLab inference on all images in directory')
   parser.add_argument('--inputDir', '-i', type=str, required = True, help='Path to directory of images to run inference on.')
-  parser.add_argument('--ouputDir', '-o', type=str, required = False, default = None, help='Path to write output to. Default will write in same directory as input.') # currently set up to only take one file.
+  parser.add_argument('--ouputDir', '-o', type=str, required = False, default = None, help='Path to write output to. Default will write in same directory as input.') 
+  parser.add_argument('--modelPath', '-m', type=str, required = False, default = None, help='Path to tarballed model. Will download on default') 
 
   args = parser.parse_args()
 
@@ -55,12 +56,18 @@ def main():
   args = parseArgs()
 
   input_dir = args.inputDir
-  ouput_dir = args.ouputDir
+  output_dir = args.ouputDir
+  model_path = args.modelPath
 
   checkExists(input_dir)
 
   logger.info("Running DeepLab inference on: %s" % input_dir)
-  model = DeepLabModel(downloadDeepLabModel())
+
+  if model_path == None:
+    logger.info('No local model path specified so downloading.')
+    model_path = downloadDeepLabModel()
+
+  model = DeepLabModel(model_path)
   deeplabVizInferAllImages(model, input_dir, output_dir)
 
 
@@ -100,6 +107,17 @@ def downloadDeepLabModel() -> str:
   urllib.request.urlretrieve(_DOWNLOAD_URL_PREFIX + _MODEL_URLS[MODEL_NAME], download_path)
   logger.info('download completed!')
 
+  return download_path
+
+def absoluteFilePaths(rootdir):
+  # https://stackoverflow.com/questions/9816816/get-absolute-paths-of-all-files-in-a-directory
+  file_paths = []
+
+  for folder, subs, files in os.walk(rootdir):
+    for filename in files:
+      file_paths.append(os.path.abspath(os.path.join(folder, filename)))
+
+  return file_paths
 
 def deeplabVizInferAllImages(model: DeepLabModel, input_dir:str, output_dir:str = None) -> None:
   """
@@ -108,8 +126,12 @@ def deeplabVizInferAllImages(model: DeepLabModel, input_dir:str, output_dir:str 
   if output_dir == None:
     output_dir = getParentDir(input_path)
 
-  for input_image in os.listdir(input_dir):
-    deeplabVizInfer(input_image, output_dir)
+  abs_file_paths = absoluteFilePaths(input_dir)
+  #print(abs_file_paths)
+
+  for input_image in abs_file_paths:
+    logger.info('Running on %s' % input_image)
+    deeplabVizInfer(model, input_image, output_dir)
 
 def getParentDir(filepath: str) -> str:
   """
@@ -119,13 +141,13 @@ def getParentDir(filepath: str) -> str:
   return os.path.abspath(os.path.join(filepath, os.pardir))
 
 
-def deeplabVizInfer(model: DeepLabModel, input_image_path:str, output_dir:str) -> None:
+def deeplabVizInfer(model: DeepLabModel, input_image_path:str, output_dir:str):
   """
   """
   saveOverlay(model, input_image_path, output_dir)
 
 
-def saveOverlay(model: DeepLabModel, input_path: str, save_dir: str = None) -> None:
+def saveOverlay(model: DeepLabModel, input_path: str, save_dir: str = None):
   """
   Inferences DeepLab model on local image and visualizes result
   Sean Hendryx
@@ -136,9 +158,9 @@ def saveOverlay(model: DeepLabModel, input_path: str, save_dir: str = None) -> N
   try:
     # load image
     orignal_im = Image.open(input_path)
+    #logger.info('image opened')
   except IOError:
-    print('Cannot retrieve image. Please check path: ' + input_path)
-  return None
+    raise RuntimeError(logger.error('Cannot retrieve image. Please check path: %s' % input_path))
 
   print('running deeplab on image %s...' % input_path)
   resized_im, seg_map = model.run(orignal_im)
@@ -151,7 +173,9 @@ def saveOverlay(model: DeepLabModel, input_path: str, save_dir: str = None) -> N
   seg_im = get_dataset_colormap.label_to_color_image(seg_map, dataset = 'cityscapes').astype(np.uint8)
   plt.imshow(seg_im, alpha=0.7)
   plt.axis('off')
-  plt.savefig(output_name, bbox = 'tight')
+  plt.savefig(output_name, bbox = 'tight', pad_inches=0)
+
+  logger.info('Saved visualized predictions to %s ' % output_name)
 
 def getBasenameNoExtension(filepath: str) -> str:
   """
