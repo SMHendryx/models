@@ -129,7 +129,7 @@ def deeplabVizInferAllImages(model: DeepLabModel, input_dir:str, output_dir:str 
   abs_file_paths = absoluteFilePaths(input_dir)
   #print(abs_file_paths)
 
-  for input_image in abs_file_paths:
+  for input_image in sorted(abs_file_paths):
     logger.info('Running on %s' % input_image)
     deeplabVizInfer(model, input_image, output_dir)
 
@@ -165,15 +165,23 @@ def saveOverlay(model: DeepLabModel, input_path: str, save_dir: str = None):
   print('running deeplab on image %s...' % input_path)
   resized_im, seg_map = model.run(orignal_im)
 
-  output_name = os.path.join(save_dir, getBasenameNoExtension(input_path) + '_DeepLab_predictions_overlay.png')
+  output_name = os.path.join(save_dir, getBasenameNoExtension(input_path) + '.png')
 
   plt.ioff()
-  plt.figure()
-  plt.imshow(resized_im)
+  # no border: https://stackoverflow.com/questions/8218608/scipy-savefig-without-frames-axes-only-content
+  fig = plt.figure(frameon=False)
+  ax = plt.Axes(fig, [0., 0., 1., 1.])
+  ax.set_axis_off()
+  ax.xaxis.set_visible(False)
+  ax.yaxis.set_visible(False)
+  fig.add_axes(ax)
+  ax.imshow(resized_im)
   seg_im = get_dataset_colormap.label_to_color_image(seg_map, dataset = 'cityscapes').astype(np.uint8)
-  plt.imshow(seg_im, alpha=0.7)
-  plt.axis('off')
-  plt.savefig(output_name, bbox = 'tight', pad_inches=0)
+  ax.imshow(seg_im, alpha=0.7)
+  #ax.axis('off')
+  #fig.axes.get_xaxis().set_visible(False)
+  #fig.axes.get_yaxis().set_visible(False)
+  fig.savefig(output_name, bbox_inches = 'tight', pad_inches=0)
 
   logger.info('Saved visualized predictions to %s ' % output_name)
 
